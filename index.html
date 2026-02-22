@@ -3,120 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PantryPal - Household Sync</title>
+    <title>PantryPal - Sync</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#10b981">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .low-stock { border-left: 4px solid #ef4444; }
+        .low-stock { border-left: 5px solid #ef4444; }
         .tab-content { display: none; }
         .active-tab { display: block; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans pb-20">
+<body class="bg-gray-50 text-gray-900 font-sans pb-24">
 
     <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-home"></i> PantryPal
-            </h1>
+            <h1 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-box"></i> PantryPal</h1>
             <div class="flex gap-2">
-                <button onclick="window.openModal()" class="bg-emerald-500 text-white w-10 h-10 rounded-full shadow flex items-center justify-center border border-emerald-400">
+                <button onclick="window.openModal()" class="bg-emerald-500 w-10 h-10 rounded-full flex items-center justify-center border border-emerald-400 shadow-inner">
                     <i class="fas fa-plus"></i>
                 </button>
-                <button onclick="toggleScanner()" class="bg-white text-emerald-600 px-4 py-2 rounded-full font-semibold text-sm shadow">
-                    <i class="fas fa-barcode"></i> Scan
+                <button onclick="window.toggleScanner()" class="bg-white text-emerald-600 px-4 py-2 rounded-full font-bold text-sm shadow">
+                    <i class="fas fa-barcode"></i> SCAN
                 </button>
             </div>
         </div>
     </header>
 
     <main class="container mx-auto p-4">
-        <div id="syncStatus" class="text-[10px] text-center mb-2 text-gray-400">Connecting to Supabase...</div>
+        <div id="syncStatus" class="text-[10px] text-center mb-4 text-gray-400 font-mono uppercase tracking-widest">Initialising...</div>
 
-        <!-- Dashboard -->
         <section id="dashboard" class="tab-content active-tab">
-            <div class="grid grid-cols-2 gap-4 mb-6">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <p class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Total Items</p>
-                    <p id="stat-total" class="text-2xl font-bold">...</p>
+            <div class="grid grid-cols-2 gap-4 mb-6 text-center">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-gray-400 text-[10px] font-bold uppercase">Items</p>
+                    <p id="stat-total" class="text-2xl font-black">0</p>
                 </div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <p class="text-red-500 text-[10px] uppercase font-bold tracking-wider">Low Stock</p>
-                    <p id="stat-low" class="text-2xl font-bold text-red-500">...</p>
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <p class="text-red-400 text-[10px] font-bold uppercase">Low Stock</p>
+                    <p id="stat-low" class="text-2xl font-black text-red-500">0</p>
                 </div>
             </div>
 
             <div class="mb-4 flex gap-2">
-                <input type="text" id="searchInput" placeholder="Search..." class="flex-1 p-2 border rounded-lg" oninput="renderUI()">
-                <select id="categoryFilter" class="p-2 border rounded-lg bg-white" onchange="renderUI()">
-                    <option value="all">All Locations</option>
+                <input type="text" id="searchInput" placeholder="Search..." class="flex-1 p-3 border rounded-xl shadow-inner outline-none focus:ring-2 ring-emerald-500" oninput="window.renderUI()">
+                <select id="categoryFilter" class="p-3 border rounded-xl bg-white outline-none" onchange="window.renderUI()">
+                    <option value="all">All</option>
                     <option>Pantry</option><option>Fridge</option><option>Freezer</option><option>Deep Freezer</option>
                 </select>
             </div>
-
             <div id="inventoryList" class="space-y-3"></div>
         </section>
 
-        <!-- Grocery List -->
         <section id="grocery" class="tab-content">
-            <h2 class="text-xl font-bold mb-4">Grocery List</h2>
-            <div id="groceryList" class="bg-white rounded-xl shadow-sm border p-4 space-y-2"></div>
+            <h2 class="text-2xl font-bold mb-4">Shopping List</h2>
+            <div id="groceryList" class="bg-white rounded-2xl shadow-sm border p-4 space-y-2"></div>
         </section>
 
-        <!-- Modals -->
-        <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex flex-col items-center justify-center p-4">
-            <div id="reader" class="w-full max-w-md bg-white rounded-lg overflow-hidden"></div>
-            <button onclick="toggleScanner()" class="mt-8 text-white bg-red-500 px-8 py-3 rounded-full font-bold">Cancel</button>
+        <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-95 z-[60] hidden flex flex-col items-center justify-center p-4">
+            <div id="reader" class="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"></div>
+            <button onclick="window.toggleScanner()" class="mt-8 text-white bg-red-500 px-10 py-4 rounded-full font-black tracking-widest uppercase text-sm">Cancel</button>
         </div>
 
-        <div id="itemModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] hidden flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
-                <h3 id="modalTitle" class="text-xl font-bold mb-4">Add Item</h3>
+        <div id="itemModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
+                <h3 id="modalTitle" class="text-xl font-black mb-6">Item Details</h3>
                 <form id="itemForm" class="space-y-4">
                     <input type="hidden" id="itemId">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Barcode (Optional)</label>
-                        <input type="text" id="itemBarcode" class="w-full p-2 border rounded-lg bg-gray-50">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Barcode</label>
+                        <input type="text" id="itemBarcode" class="w-full p-3 border rounded-xl bg-gray-50 outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Item Name</label>
-                        <input type="text" id="itemName" required class="w-full p-2 border rounded-lg" placeholder="e.g. Milk">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Item Name</label>
+                        <input type="text" id="itemName" required class="w-full p-3 border rounded-xl outline-none" placeholder="e.g. Milk">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Quantity</label>
-                            <input type="number" id="itemQty" value="1" class="w-full p-2 border rounded-lg">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Current Qty</label>
+                            <input type="number" id="itemQty" value="1" class="w-full p-3 border rounded-xl outline-none">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase">Low Stock Alert at</label>
-                            <input type="number" id="itemMin" value="1" class="w-full p-2 border rounded-lg">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Low Limit</label>
+                            <input type="number" id="itemMin" value="1" class="w-full p-3 border rounded-xl outline-none">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase">Location</label>
-                        <select id="itemCategory" class="w-full p-2 border rounded-lg">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Storage</label>
+                        <select id="itemCategory" class="w-full p-3 border rounded-xl outline-none">
                             <option>Pantry</option><option>Fridge</option><option>Freezer</option><option>Deep Freezer</option>
                         </select>
                     </div>
-                    <div class="flex gap-2 pt-4">
-                        <button type="button" onclick="closeModal()" class="flex-1 py-2 text-gray-400 font-bold">Cancel</button>
-                        <button type="submit" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold">Save Item</button>
+                    <div class="flex gap-2 pt-6">
+                        <button type="button" onclick="window.closeModal()" class="flex-1 py-3 text-gray-400 font-bold">Cancel</button>
+                        <button type="submit" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black shadow-lg shadow-emerald-200">Save</button>
                     </div>
-                    <button type="button" id="deleteBtn" class="w-full text-red-400 text-xs mt-2 hidden" onclick="window.deleteItem()">Delete Item</button>
+                    <button type="button" id="deleteBtn" class="w-full text-red-400 text-xs font-bold mt-4 hidden" onclick="window.deleteItem()">Delete Permanently</button>
                 </form>
             </div>
         </div>
     </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 z-50">
-        <button onclick="showTab('dashboard')" id="nav-dash" class="flex flex-col items-center p-2 text-emerald-600">
-            <i class="fas fa-list text-xl"></i><span class="text-[10px] mt-1 font-bold">STOCK</span>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-3 z-50">
+        <button onclick="window.showTab('dashboard')" id="nav-dash" class="flex flex-col items-center p-2 text-emerald-600">
+            <i class="fas fa-th-list text-xl"></i><span class="text-[9px] mt-1 font-black uppercase">Stock</span>
         </button>
-        <button onclick="showTab('grocery')" id="nav-groc" class="flex flex-col items-center p-2 text-gray-400">
-            <i class="fas fa-shopping-cart text-xl"></i><span class="text-[10px] mt-1 font-bold">SHOPPING</span>
+        <button onclick="window.showTab('grocery')" id="nav-groc" class="flex flex-col items-center p-2 text-gray-400">
+            <i class="fas fa-shopping-basket text-xl"></i><span class="text-[9px] mt-1 font-black uppercase">Shopping</span>
         </button>
     </nav>
 
