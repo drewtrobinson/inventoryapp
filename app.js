@@ -1,66 +1,41 @@
-// 1. INSERT YOUR SUPABASE CREDENTIALS HERE
 const SUPABASE_URL = 'https://vvzsrrcddwljhirbeilt.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8soLaZIbUDWBV3hQIFVGIA_ycLtozey';
 
-// This wait-logic ensures the Supabase library is loaded before trying to connect
-let supabase;
+let pantryClient;
+let inventory = [];
+let html5QrCode;
 
-async function init() {
+async function startApp() {
     try {
-        // Initialize the client correctly for the 2026 SDK
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        pantryClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        // Test the connection immediately
-        const { data, error } = await supabase.from('inventory').select('*').limit(1);
-        
+        // Initial Fetch
+        const { data, error } = await pantryClient.from('inventory').select('*');
         if (error) throw error;
 
-        document.getElementById('syncStatus').innerText = "Live Sync Active 🟢";
-        refreshData();
+        inventory = data || [];
+        document.getElementById('syncStatus').innerText = "Household Sync Active 🟢";
+        window.renderUI();
 
-        // Listen for real-time updates
-        supabase.channel('pantry-changes')
+        // Real-time Listeners
+        pantryClient.channel('pantry-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => refreshData())
             .subscribe();
 
     } catch (err) {
-        console.error("Connection error:", err);
-        document.getElementById('syncStatus').innerHTML = `<span class="text-red-500">Connection Failed: Check Console</span>`;
+        console.error(err);
+        document.getElementById('syncStatus').innerHTML = `<span class="text-red-500">Sync Error: Check Settings</span>`;
     }
-}
-
-// Rest of the logic (refreshData, updateQty, etc.) stays the same...
-
-let inventory = [];
-let html5QrCode;
-
-// Sync logic: Fetch and listen for changes
-async function init() {
-    // Initial fetch
-    const { data, error } = await supabase.from('inventory').select('*');
-    if (data) {
-        inventory = data;
-        renderUI();
-    }
-    document.getElementById('syncStatus').innerText = "Live Sync Active 🟢";
-
-    // Listen for real-time updates from other phones
-    supabase.channel('pantry-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, payload => {
-            refreshData();
-        })
-        .subscribe();
 }
 
 async function refreshData() {
-    const { data } = await supabase.from('inventory').select('*');
+    const { data } = await pantryClient.from('inventory').select('*');
     if (data) {
         inventory = data;
-        renderUI();
+        window.renderUI();
     }
 }
 
-// UI Rendering
 window.showTab = (tabId) => {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active-tab'));
     document.getElementById(tabId).classList.add('active-tab');
@@ -81,38 +56,37 @@ window.renderUI = () => {
     document.getElementById('stat-low').innerText = inventory.filter(i => i.qty <= i.min).length;
 
     list.innerHTML = filtered.map(item => `
-        <div class="bg-white p-4 rounded-xl shadow-sm border ${item.qty <= item.min ? 'low-stock' : ''} flex items-center justify-between">
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 ${item.qty <= item.min ? 'low-stock' : ''} flex items-center justify-between">
             <div onclick="window.openModal('${item.id}')" class="flex-1">
-                <h4 class="font-bold">${item.name}</h4>
-                <p class="text-[10px] text-gray-400">${item.category.toUpperCase()} ${item.barcode ? '| ' + item.barcode : ''}</p>
+                <h4 class="font-black text-gray-800">${item.name}</h4>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-tight">${item.category} ${item.barcode ? '• ' + item.barcode : ''}</p>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="window.updateQty('${item.id}', -1)" class="w-8 h-8 rounded-full bg-gray-50 border">-</button>
-                <span class="font-bold w-6 text-center ${item.qty <= item.min ? 'text-red-500' : ''}">${item.qty}</span>
-                <button onclick="window.updateQty('${item.id}', 1)" class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">+</button>
+                <button onclick="window.updateQty('${item.id}', -1)" class="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 font-black">-</button>
+                <span class="font-black w-6 text-center text-lg">${item.qty}</span>
+                <button onclick="window.updateQty('${item.id}', 1)" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 font-black">+</button>
             </div>
         </div>
     `).join('');
 
     const needed = inventory.filter(i => i.qty <= i.min);
     document.getElementById('groceryList').innerHTML = needed.length ? needed.map(item => `
-        <div class="flex items-center justify-between p-2 border-b">
-            <div><p class="font-medium">${item.name}</p><p class="text-[10px] text-gray-400">STOCK: ${item.qty} / MIN: ${item.min}</p></div>
-            <i class="fas fa-shopping-cart text-emerald-200"></i>
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl mb-2">
+            <div><p class="font-black">${item.name}</p><p class="text-[10px] text-gray-400 font-bold">NEED ASAP</p></div>
+            <i class="fas fa-cart-plus text-emerald-300"></i>
         </div>
-    `).join('') : '<p class="text-center text-gray-400 py-8">All items stocked!</p>';
+    `).join('') : '<p class="text-center text-gray-400 py-10">Pantry is full! 🎉</p>';
 };
 
-// Database Actions
 window.updateQty = async (id, delta) => {
     const item = inventory.find(i => i.id === id);
     const newQty = Math.max(0, item.qty + delta);
-    await supabase.from('inventory').update({ qty: newQty }).eq('id', id);
+    await pantryClient.from('inventory').update({ qty: newQty }).eq('id', id);
 };
 
 window.openModal = (id = null) => {
-    const form = document.getElementById('itemForm');
-    form.reset();
+    document.getElementById('itemForm').reset();
+    document.getElementById('itemId').value = '';
     document.getElementById('deleteBtn').classList.add('hidden');
     
     if (id) {
@@ -126,8 +100,7 @@ window.openModal = (id = null) => {
         document.getElementById('itemCategory').value = item.category;
         document.getElementById('deleteBtn').classList.remove('hidden');
     } else {
-        document.getElementById('modalTitle').innerText = 'Manual Add';
-        document.getElementById('itemId').value = '';
+        document.getElementById('modalTitle').innerText = 'Add Item';
     }
     document.getElementById('itemModal').classList.remove('hidden');
 };
@@ -145,23 +118,19 @@ document.getElementById('itemForm').onsubmit = async (e) => {
         category: document.getElementById('itemCategory').value
     };
 
-    if (id) {
-        await supabase.from('inventory').update(itemData).eq('id', id);
-    } else {
-        await supabase.from('inventory').insert([itemData]);
-    }
-    closeModal();
+    if (id) await pantryClient.from('inventory').update(itemData).eq('id', id);
+    else await pantryClient.from('inventory').insert([itemData]);
+    window.closeModal();
 };
 
 window.deleteItem = async () => {
     const id = document.getElementById('itemId').value;
-    if(confirm('Remove this item entirely?')) {
-        await supabase.from('inventory').delete().eq('id', id);
-        closeModal();
+    if(confirm('Delete permanently?')) {
+        await pantryClient.from('inventory').delete().eq('id', id);
+        window.closeModal();
     }
-}
+};
 
-// Scanner Logic
 window.toggleScanner = () => {
     const modal = document.getElementById('scannerModal');
     if (modal.classList.contains('hidden')) {
@@ -183,4 +152,4 @@ window.toggleScanner = () => {
     }
 };
 
-init();
+startApp();
