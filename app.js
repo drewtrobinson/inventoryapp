@@ -1,8 +1,35 @@
 // 1. INSERT YOUR SUPABASE CREDENTIALS HERE
-const SUPABASE_URL = 'https://vvzsrrcddwljhirbeilt.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_8soLaZIbUDWBV3hQIFVGIA_ycLtozey';
+const SUPABASE_URL = 'https://your-id.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_your_key';
 
-const supabase = libsupabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// This wait-logic ensures the Supabase library is loaded before trying to connect
+let supabase;
+
+async function init() {
+    try {
+        // Initialize the client correctly for the 2026 SDK
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // Test the connection immediately
+        const { data, error } = await supabase.from('inventory').select('*').limit(1);
+        
+        if (error) throw error;
+
+        document.getElementById('syncStatus').innerText = "Live Sync Active 🟢";
+        refreshData();
+
+        // Listen for real-time updates
+        supabase.channel('pantry-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => refreshData())
+            .subscribe();
+
+    } catch (err) {
+        console.error("Connection error:", err);
+        document.getElementById('syncStatus').innerHTML = `<span class="text-red-500">Connection Failed: Check Console</span>`;
+    }
+}
+
+// Rest of the logic (refreshData, updateQty, etc.) stays the same...
 
 let inventory = [];
 let html5QrCode;
