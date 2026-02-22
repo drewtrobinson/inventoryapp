@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PantryPal Sync</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .low-stock { border-left: 4px solid #ef4444; }
+        .tab-content { display: none; }
+        .active-tab { display: block; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans pb-20">
+
+    <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-sync-alt animate-spin-slow"></i> PantryPal
+            </h1>
+            <button onclick="toggleScanner()" class="bg-white text-emerald-600 px-4 py-2 rounded-full font-semibold text-sm shadow">
+                <i class="fas fa-barcode"></i> Scan
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4">
+        <!-- Status Indicator -->
+        <div id="syncStatus" class="text-[10px] text-center mb-2 text-gray-400">Connecting to cloud...</div>
+
+        <section id="dashboard" class="tab-content active-tab">
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Total Items</p>
+                    <p id="stat-total" class="text-3xl font-bold">...</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <p class="text-red-500 text-xs uppercase font-bold tracking-wider">Low Stock</p>
+                    <p id="stat-low" class="text-3xl font-bold text-red-500">...</p>
+                </div>
+            </div>
+
+            <div class="mb-4 flex gap-2">
+                <input type="text" id="searchInput" placeholder="Search pantry..." class="flex-1 p-2 border rounded-lg" oninput="renderUI()">
+                <select id="categoryFilter" class="p-2 border rounded-lg bg-white" onchange="renderUI()">
+                    <option value="all">All</option>
+                    <option value="Pantry">Pantry</option>
+                    <option value="Fridge">Fridge</option>
+                    <option value="Freezer">Freezer</option>
+                    <option value="Deep Freezer">Deep Freezer</option>
+                </select>
+            </div>
+
+            <div id="inventoryList" class="space-y-3"></div>
+        </section>
+
+        <section id="grocery" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4">Grocery List</h2>
+            <div id="groceryList" class="bg-white rounded-xl shadow-sm border p-4 space-y-2"></div>
+        </section>
+
+        <!-- Modals (Scanner and Form) -->
+        <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex-col items-center justify-center p-4">
+            <div id="reader" class="w-full max-w-md bg-white rounded-lg overflow-hidden"></div>
+            <button onclick="toggleScanner()" class="mt-8 text-white bg-red-500 px-8 py-3 rounded-full font-bold">Close Scanner</button>
+        </div>
+
+        <div id="itemModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] hidden flex items-center justify-center p-4">
+            <div class="bg-white w-full max-w-md rounded-2xl p-6">
+                <h3 id="modalTitle" class="text-xl font-bold mb-4">Add Item</h3>
+                <form id="itemForm" class="space-y-4">
+                    <input type="hidden" id="itemId">
+                    <div><label class="block text-sm font-medium">Barcode</label><input type="text" id="itemBarcode" class="w-full p-2 border rounded-lg" readonly></div>
+                    <div><label class="block text-sm font-medium">Item Name</label><input type="text" id="itemName" required class="w-full p-2 border rounded-lg"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium">Quantity</label><input type="number" id="itemQty" value="1" class="w-full p-2 border rounded-lg"></div>
+                        <div><label class="block text-sm font-medium">Min. Stock</label><input type="number" id="itemMin" value="1" class="w-full p-2 border rounded-lg"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Location</label>
+                        <select id="itemCategory" class="w-full p-2 border rounded-lg">
+                            <option>Pantry</option><option>Fridge</option><option>Freezer</option><option>Deep Freezer</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button type="button" onclick="closeModal()" class="flex-1 py-2 text-gray-500">Cancel</button>
+                        <button type="submit" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 z-50">
+        <button onclick="showTab('dashboard')" id="nav-dash" class="flex flex-col items-center p-2 text-emerald-600">
+            <i class="fas fa-th-large text-xl"></i><span class="text-[10px] mt-1 font-bold">INVENTORY</span>
+        </button>
+        <button onclick="showTab('grocery')" id="nav-groc" class="flex flex-col items-center p-2 text-gray-400">
+            <i class="fas fa-shopping-basket text-xl"></i><span class="text-[10px] mt-1 font-bold">SHOPPING</span>
+        </button>
+    </nav>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
