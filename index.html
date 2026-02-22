@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PantryPal Sync</title>
+    <title>PantryPal - Household Sync</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#10b981">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,76 +20,92 @@
     <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-sync-alt animate-spin-slow"></i> PantryPal
+                <i class="fas fa-home"></i> PantryPal
             </h1>
-            <button onclick="toggleScanner()" class="bg-white text-emerald-600 px-4 py-2 rounded-full font-semibold text-sm shadow">
-                <i class="fas fa-barcode"></i> Scan
-            </button>
+            <div class="flex gap-2">
+                <button onclick="window.openModal()" class="bg-emerald-500 text-white w-10 h-10 rounded-full shadow flex items-center justify-center border border-emerald-400">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button onclick="toggleScanner()" class="bg-white text-emerald-600 px-4 py-2 rounded-full font-semibold text-sm shadow">
+                    <i class="fas fa-barcode"></i> Scan
+                </button>
+            </div>
         </div>
     </header>
 
     <main class="container mx-auto p-4">
-        <!-- Status Indicator -->
-        <div id="syncStatus" class="text-[10px] text-center mb-2 text-gray-400">Connecting to cloud...</div>
+        <div id="syncStatus" class="text-[10px] text-center mb-2 text-gray-400">Connecting to Supabase...</div>
 
+        <!-- Dashboard -->
         <section id="dashboard" class="tab-content active-tab">
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <p class="text-gray-500 text-xs uppercase font-bold tracking-wider">Total Items</p>
-                    <p id="stat-total" class="text-3xl font-bold">...</p>
+                    <p class="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Total Items</p>
+                    <p id="stat-total" class="text-2xl font-bold">...</p>
                 </div>
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <p class="text-red-500 text-xs uppercase font-bold tracking-wider">Low Stock</p>
-                    <p id="stat-low" class="text-3xl font-bold text-red-500">...</p>
+                    <p class="text-red-500 text-[10px] uppercase font-bold tracking-wider">Low Stock</p>
+                    <p id="stat-low" class="text-2xl font-bold text-red-500">...</p>
                 </div>
             </div>
 
             <div class="mb-4 flex gap-2">
-                <input type="text" id="searchInput" placeholder="Search pantry..." class="flex-1 p-2 border rounded-lg" oninput="renderUI()">
+                <input type="text" id="searchInput" placeholder="Search..." class="flex-1 p-2 border rounded-lg" oninput="renderUI()">
                 <select id="categoryFilter" class="p-2 border rounded-lg bg-white" onchange="renderUI()">
-                    <option value="all">All</option>
-                    <option value="Pantry">Pantry</option>
-                    <option value="Fridge">Fridge</option>
-                    <option value="Freezer">Freezer</option>
-                    <option value="Deep Freezer">Deep Freezer</option>
+                    <option value="all">All Locations</option>
+                    <option>Pantry</option><option>Fridge</option><option>Freezer</option><option>Deep Freezer</option>
                 </select>
             </div>
 
             <div id="inventoryList" class="space-y-3"></div>
         </section>
 
+        <!-- Grocery List -->
         <section id="grocery" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4">Grocery List</h2>
+            <h2 class="text-xl font-bold mb-4">Grocery List</h2>
             <div id="groceryList" class="bg-white rounded-xl shadow-sm border p-4 space-y-2"></div>
         </section>
 
-        <!-- Modals (Scanner and Form) -->
-        <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex-col items-center justify-center p-4">
+        <!-- Modals -->
+        <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-90 z-[60] hidden flex flex-col items-center justify-center p-4">
             <div id="reader" class="w-full max-w-md bg-white rounded-lg overflow-hidden"></div>
-            <button onclick="toggleScanner()" class="mt-8 text-white bg-red-500 px-8 py-3 rounded-full font-bold">Close Scanner</button>
+            <button onclick="toggleScanner()" class="mt-8 text-white bg-red-500 px-8 py-3 rounded-full font-bold">Cancel</button>
         </div>
 
         <div id="itemModal" class="fixed inset-0 bg-black bg-opacity-50 z-[60] hidden flex items-center justify-center p-4">
-            <div class="bg-white w-full max-w-md rounded-2xl p-6">
+            <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
                 <h3 id="modalTitle" class="text-xl font-bold mb-4">Add Item</h3>
                 <form id="itemForm" class="space-y-4">
                     <input type="hidden" id="itemId">
-                    <div><label class="block text-sm font-medium">Barcode</label><input type="text" id="itemBarcode" class="w-full p-2 border rounded-lg" readonly></div>
-                    <div><label class="block text-sm font-medium">Item Name</label><input type="text" id="itemName" required class="w-full p-2 border rounded-lg"></div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium">Quantity</label><input type="number" id="itemQty" value="1" class="w-full p-2 border rounded-lg"></div>
-                        <div><label class="block text-sm font-medium">Min. Stock</label><input type="number" id="itemMin" value="1" class="w-full p-2 border rounded-lg"></div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Barcode (Optional)</label>
+                        <input type="text" id="itemBarcode" class="w-full p-2 border rounded-lg bg-gray-50">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium">Location</label>
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Item Name</label>
+                        <input type="text" id="itemName" required class="w-full p-2 border rounded-lg" placeholder="e.g. Milk">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Quantity</label>
+                            <input type="number" id="itemQty" value="1" class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Low Stock Alert at</label>
+                            <input type="number" id="itemMin" value="1" class="w-full p-2 border rounded-lg">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase">Location</label>
                         <select id="itemCategory" class="w-full p-2 border rounded-lg">
                             <option>Pantry</option><option>Fridge</option><option>Freezer</option><option>Deep Freezer</option>
                         </select>
                     </div>
                     <div class="flex gap-2 pt-4">
-                        <button type="button" onclick="closeModal()" class="flex-1 py-2 text-gray-500">Cancel</button>
-                        <button type="submit" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold">Save</button>
+                        <button type="button" onclick="closeModal()" class="flex-1 py-2 text-gray-400 font-bold">Cancel</button>
+                        <button type="submit" class="flex-1 py-2 bg-emerald-600 text-white rounded-lg font-bold">Save Item</button>
                     </div>
+                    <button type="button" id="deleteBtn" class="w-full text-red-400 text-xs mt-2 hidden" onclick="window.deleteItem()">Delete Item</button>
                 </form>
             </div>
         </div>
@@ -97,14 +113,14 @@
 
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 z-50">
         <button onclick="showTab('dashboard')" id="nav-dash" class="flex flex-col items-center p-2 text-emerald-600">
-            <i class="fas fa-th-large text-xl"></i><span class="text-[10px] mt-1 font-bold">INVENTORY</span>
+            <i class="fas fa-list text-xl"></i><span class="text-[10px] mt-1 font-bold">STOCK</span>
         </button>
         <button onclick="showTab('grocery')" id="nav-groc" class="flex flex-col items-center p-2 text-gray-400">
-            <i class="fas fa-shopping-basket text-xl"></i><span class="text-[10px] mt-1 font-bold">SHOPPING</span>
+            <i class="fas fa-shopping-cart text-xl"></i><span class="text-[10px] mt-1 font-bold">SHOPPING</span>
         </button>
     </nav>
 
-    <!-- Firebase SDK -->
-    <script type="module" src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
 </body>
 </html>
