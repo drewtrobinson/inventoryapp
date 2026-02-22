@@ -1,6 +1,6 @@
 // 1. INSERT YOUR SUPABASE CREDENTIALS HERE
-const SUPABASE_URL = 'https://your-id.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_your_key';
+const SUPABASE_URL = 'https://vvzsrrcddwljhirbeilt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_8soLaZIbUDWBV3hQIFVGIA_ycLtozey';
 
 // This wait-logic ensures the Supabase library is loaded before trying to connect
 let supabase;
