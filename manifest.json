@@ -1,17 +1,13 @@
 {
-    "name": "PantryPal Inventory",
+    "name": "PantryPal",
     "short_name": "PantryPal",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#10b981",
-    "description": "Smart inventory tracker for your kitchen.",
-    "icons": [
-        {
-            "src": "https://cdn-icons-png.flaticon.com/512/3081/3081840.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ]
+    "icons": [{
+        "src": "https://cdn-icons-png.flaticon.com/512/3081/3081840.png",
+        "sizes": "512x512",
+        "type": "image/png"
+    }]
 }
