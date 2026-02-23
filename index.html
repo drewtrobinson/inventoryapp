@@ -1,36 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en" class=""> <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PantryPal - Household</title>
+    <title>PantryPal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        // Tailwind Config for Dark Mode
+        tailwind.config = { darkMode: 'class' }
+    </script>
     <style>
-        .low-stock { border-left: 5px solid #ef4444; }
+        /* Pink Flash Effect */
+        @keyframes flash-pink {
+            0% { background-color: transparent; }
+            50% { background-color: #fce7f3; } /* pink-100 */
+            100% { background-color: transparent; }
+        }
+        .dark @keyframes flash-pink-dark {
+            0% { background-color: transparent; }
+            50% { background-color: #500724; } /* pink-900 */
+            100% { background-color: transparent; }
+        }
+        .sync-flash { animation: flash-pink 1s ease-out; }
+        .dark .sync-flash { animation: flash-pink-dark 1s ease-out; }
+
+        .low-stock { border-left: 5px solid #db2777; } /* pink-600 */
         .tab-content { display: none; }
         .active-tab { display: block; }
-        
-        @keyframes flash-green {
-            0% { background-color: white; }
-            50% { background-color: #d1fae5; }
-            100% { background-color: white; }
-        }
-        .sync-flash { animation: flash-green 1s ease-out; }
-        
-        /* Shopping Mode Styles */
-        .item-checked { opacity: 0.5; text-decoration: line-through; }
-        .category-header { position: sticky; top: 72px; z-index: 40; }
+        .item-checked { opacity: 0.4; text-decoration: line-through; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans pb-24">
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans pb-24 transition-colors duration-200">
 
-    <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50">
+    <header class="bg-pink-600 text-white p-4 shadow-md sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-house-chimney"></i> PantryPal</h1>
-            <button onclick="window.openModal()" class="bg-white text-emerald-600 px-5 py-2 rounded-full font-black text-xs shadow-lg uppercase tracking-wider">
-                <i class="fas fa-plus mr-1"></i> Add
-            </button>
+            <h1 class="text-xl font-black flex items-center gap-2 tracking-tight">
+                <i class="fas fa-heart"></i> PantryPal
+            </h1>
+            <div class="flex items-center gap-3">
+                <button onclick="window.toggleTheme()" class="w-10 h-10 flex items-center justify-center rounded-full bg-pink-700">
+                    <i id="theme-icon" class="fas fa-moon"></i>
+                </button>
+                <button onclick="window.openModal()" class="bg-white text-pink-600 px-5 py-2 rounded-full font-black text-xs shadow-lg uppercase tracking-wider">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -38,19 +52,21 @@
         <div id="syncStatus" class="text-[10px] text-center mb-4 text-gray-400 font-mono uppercase tracking-widest">Initialising...</div>
 
         <section id="dashboard" class="tab-content active-tab">
-            <div class="grid grid-cols-2 gap-3 mb-6 text-center">
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                    <p class="text-gray-400 text-[9px] font-black uppercase">Inventory</p>
-                    <p id="stat-total" class="text-xl font-black text-emerald-600">0</p>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+                    <p class="text-gray-400 dark:text-gray-500 text-[9px] font-black uppercase">Stock</p>
+                    <p id="stat-total" class="text-2xl font-black text-pink-600">0</p>
                 </div>
-                <div class="bg-white p-3 rounded-2xl shadow-sm border border-gray-100">
-                    <p class="text-red-400 text-[9px] font-black uppercase">Shopping</p>
-                    <p id="stat-low" class="text-xl font-black text-red-500">0</p>
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 text-center">
+                    <p class="text-gray-400 dark:text-gray-500 text-[9px] font-black uppercase">Needed</p>
+                    <p id="stat-low" class="text-2xl font-black text-pink-500">0</p>
                 </div>
             </div>
 
             <div class="mb-6">
-                <input type="text" id="searchInput" placeholder="Quick find..." class="w-full p-4 border rounded-2xl shadow-inner outline-none focus:ring-2 ring-emerald-500 mb-4" oninput="window.renderUI()">
+                <input type="text" id="searchInput" placeholder="Search pantry..." 
+                       class="w-full p-4 bg-white dark:bg-gray-800 border-none rounded-2xl shadow-inner dark:shadow-none outline-none focus:ring-2 ring-pink-500 text-gray-800 dark:text-white" 
+                       oninput="window.renderUI()">
             </div>
             
             <div id="inventoryList" class="space-y-8"></div>
@@ -59,60 +75,60 @@
         <section id="grocery" class="tab-content">
             <div class="flex justify-between items-end mb-4">
                 <h2 class="text-2xl font-black">Shopping List</h2>
-                <button onclick="window.resetList()" class="text-[10px] font-bold text-gray-400 uppercase border border-gray-200 px-2 py-1 rounded-md">Clear Checkboxes</button>
+                <button onclick="window.resetList()" class="text-[10px] font-bold text-gray-400 uppercase border border-gray-200 dark:border-gray-700 px-2 py-1 rounded-md">Reset</button>
             </div>
             <div id="groceryList" class="space-y-2"></div>
         </section>
 
-        <div id="itemModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
-                <h3 id="modalTitle" class="text-xl font-black mb-6">Item Details</h3>
+        <div id="itemModal" class="fixed inset-0 bg-black/60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl p-6 shadow-2xl">
+                <h3 id="modalTitle" class="text-xl font-black mb-6 text-pink-600">Item Details</h3>
                 <form id="itemForm" class="space-y-4">
                     <input type="hidden" id="itemId">
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Item Name</label>
-                        <input type="text" id="itemName" required class="w-full p-3 border rounded-xl outline-none">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Name</label>
+                        <input type="text" id="itemName" required class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl outline-none focus:ring-2 ring-pink-500">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Quantity</label>
-                            <input type="number" id="itemQty" value="1" class="w-full p-3 border rounded-xl">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Qty</label>
+                            <input type="number" id="itemQty" class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Low Stock Limit</label>
-                            <input type="number" id="itemMin" value="1" class="w-full p-3 border rounded-xl">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Alert Below</label>
+                            <input type="number" id="itemMin" class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Storage Location</label>
-                        <select id="itemCategory" class="w-full p-3 border rounded-xl bg-gray-50">
+                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Location</label>
+                        <select id="itemCategory" class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl">
                             <option>Pantry</option><option>Fridge</option><option>Freezer</option>
                             <option>Deep Freezer</option><option>Spices</option><option>Ellowyn's</option>
                             <option>Dairy</option><option>General</option>
                         </select>
                     </div>
-                    <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
-                        <input type="checkbox" id="itemReplenish" checked class="w-5 h-5 accent-emerald-600">
-                        <label for="itemReplenish" class="text-xs font-bold text-gray-600">Include on shopping list?</label>
+                    <div class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl">
+                        <input type="checkbox" id="itemReplenish" checked class="w-5 h-5 accent-pink-600">
+                        <label for="itemReplenish" class="text-xs font-bold text-gray-500">Replenish routinely?</label>
                     </div>
                     <div class="flex gap-2 pt-4">
                         <button type="button" onclick="window.closeModal()" class="flex-1 py-3 text-gray-400 font-bold">Cancel</button>
-                        <button type="submit" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black">Save</button>
+                        <button type="submit" class="flex-1 py-3 bg-pink-600 text-white rounded-xl font-black">Save Item</button>
                     </div>
-                    <button type="button" id="deleteBtn" class="w-full text-red-400 text-[10px] font-bold mt-4 hidden uppercase" onclick="window.deleteItem()">Delete Permanently</button>
+                    <button type="button" id="deleteBtn" class="w-full text-red-500 text-[10px] font-black mt-4 hidden uppercase tracking-widest" onclick="window.deleteItem()">Remove Item</button>
                 </form>
             </div>
         </div>
     </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50">
-        <button onclick="window.showTab('dashboard')" id="nav-dash" class="flex flex-col items-center p-2 text-emerald-600">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-around p-3 z-50">
+        <button onclick="window.showTab('dashboard')" id="nav-dash" class="flex flex-col items-center p-2 text-pink-600">
             <i class="fas fa-boxes-stacked text-xl"></i><span class="text-[9px] mt-1 font-black uppercase">Pantry</span>
         </button>
         <button onclick="window.showTab('grocery')" id="nav-groc" class="flex flex-col items-center p-2 text-gray-400">
             <div class="relative">
                 <i class="fas fa-cart-shopping text-xl"></i>
-                <div id="badge-count" class="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center hidden font-black">0</div>
+                <div id="badge-count" class="absolute -top-1 -right-2 bg-pink-600 text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center hidden font-black">0</div>
             </div>
             <span class="text-[9px] mt-1 font-black uppercase">Shopping</span>
         </button>
