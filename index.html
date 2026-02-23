@@ -3,31 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PantryPal - Sync</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#10b981">
+    <title>PantryPal - Locations</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .low-stock { border-left: 5px solid #ef4444; }
         .tab-content { display: none; }
         .active-tab { display: block; }
+        
+        /* The Flash Effect */
+        @keyframes flash-green {
+            0% { background-color: white; }
+            50% { background-color: #d1fae5; }
+            100% { background-color: white; }
+        }
+        .sync-flash { animation: flash-green 1s ease-out; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans pb-24">
 
     <header class="bg-emerald-600 text-white p-4 shadow-md sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-box"></i> PantryPal</h1>
-            <div class="flex gap-2">
-                <button onclick="window.openModal()" class="bg-emerald-500 w-10 h-10 rounded-full flex items-center justify-center border border-emerald-400 shadow-inner">
-                    <i class="fas fa-plus"></i>
-                </button>
-                <button onclick="window.toggleScanner()" class="bg-white text-emerald-600 px-4 py-2 rounded-full font-bold text-sm shadow">
-                    <i class="fas fa-barcode"></i> SCAN
-                </button>
-            </div>
+            <h1 class="text-xl font-bold flex items-center gap-2"><i class="fas fa-home"></i> PantryPal</h1>
+            <button onclick="window.openModal()" class="bg-white text-emerald-600 px-6 py-2 rounded-full font-black text-sm shadow">
+                <i class="fas fa-plus mr-1"></i> ADD ITEM
+            </button>
         </div>
     </header>
 
@@ -37,20 +37,22 @@
         <section id="dashboard" class="tab-content active-tab">
             <div class="grid grid-cols-2 gap-4 mb-6 text-center">
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <p class="text-gray-400 text-[10px] font-bold uppercase">Items</p>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase">Unique Items</p>
                     <p id="stat-total" class="text-2xl font-black">0</p>
                 </div>
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                    <p class="text-red-400 text-[10px] font-bold uppercase">Low Stock</p>
+                    <p class="text-red-400 text-[10px] font-bold uppercase">Need to Buy</p>
                     <p id="stat-low" class="text-2xl font-black text-red-500">0</p>
                 </div>
             </div>
 
-            <div class="mb-4 flex gap-2">
-                <input type="text" id="searchInput" placeholder="Search..." class="flex-1 p-3 border rounded-xl shadow-inner outline-none focus:ring-2 ring-emerald-500" oninput="window.renderUI()">
-                <select id="categoryFilter" class="p-3 border rounded-xl bg-white outline-none" onchange="window.renderUI()">
-                    <option value="all">All</option>
-                    <option>Pantry</option><option>Fridge</option><option>Freezer</option><option>Deep Freezer</option>
+            <div class="mb-4 space-y-2">
+                <input type="text" id="searchInput" placeholder="Search by name..." class="w-full p-3 border rounded-xl shadow-inner outline-none focus:ring-2 ring-emerald-500" oninput="window.renderUI()">
+                <select id="categoryFilter" class="w-full p-3 border rounded-xl bg-white outline-none" onchange="window.renderUI()">
+                    <option value="all">All Locations</option>
+                    <option>Pantry</option><option>Fridge</option><option>Freezer</option>
+                    <option>Deep Freezer</option><option>Spices</option><option>Ellowyn's</option>
+                    <option>Dairy</option><option>General</option>
                 </select>
             </div>
             <div id="inventoryList" class="space-y-3"></div>
@@ -61,53 +63,50 @@
             <div id="groceryList" class="bg-white rounded-2xl shadow-sm border p-4 space-y-2"></div>
         </section>
 
-        <div id="scannerModal" class="fixed inset-0 bg-black bg-opacity-95 z-[60] hidden flex flex-col items-center justify-center p-4">
-            <div id="reader" class="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl"></div>
-            <button onclick="window.toggleScanner()" class="mt-8 text-white bg-red-500 px-10 py-4 rounded-full font-black tracking-widest uppercase text-sm">Cancel</button>
-        </div>
-
         <div id="itemModal" class="fixed inset-0 bg-black bg-opacity-60 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl">
                 <h3 id="modalTitle" class="text-xl font-black mb-6">Item Details</h3>
                 <form id="itemForm" class="space-y-4">
                     <input type="hidden" id="itemId">
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Barcode</label>
-                        <input type="text" id="itemBarcode" class="w-full p-3 border rounded-xl bg-gray-50 outline-none">
-                    </div>
-                    <div>
                         <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Item Name</label>
-                        <input type="text" id="itemName" required class="w-full p-3 border rounded-xl outline-none" placeholder="e.g. Milk">
+                        <input type="text" id="itemName" required class="w-full p-3 border rounded-xl outline-none">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Current Qty</label>
-                            <input type="number" id="itemQty" value="1" class="w-full p-3 border rounded-xl outline-none">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Quantity</label>
+                            <input type="number" id="itemQty" value="1" class="w-full p-3 border rounded-xl">
                         </div>
                         <div>
-                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Low Limit</label>
-                            <input type="number" id="itemMin" value="1" class="w-full p-3 border rounded-xl outline-none">
+                            <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Alert Below</label>
+                            <input type="number" id="itemMin" value="1" class="w-full p-3 border rounded-xl">
                         </div>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Storage</label>
-                        <select id="itemCategory" class="w-full p-3 border rounded-xl outline-none">
-                            <option>Pantry</option><option>Fridge</option><option>Freezer</option><option>Deep Freezer</option>
+                        <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Location</label>
+                        <select id="itemCategory" class="w-full p-3 border rounded-xl bg-gray-50">
+                            <option>Pantry</option><option>Fridge</option><option>Freezer</option>
+                            <option>Deep Freezer</option><option>Spices</option><option>Ellowyn's</option>
+                            <option>Dairy</option><option>General</option>
                         </select>
                     </div>
-                    <div class="flex gap-2 pt-6">
-                        <button type="button" onclick="window.closeModal()" class="flex-1 py-3 text-gray-400 font-bold">Cancel</button>
-                        <button type="submit" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black shadow-lg shadow-emerald-200">Save</button>
+                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
+                        <input type="checkbox" id="itemReplenish" checked class="w-5 h-5 accent-emerald-600">
+                        <label for="itemReplenish" class="text-sm font-bold text-gray-600">Replenish routinely?</label>
                     </div>
-                    <button type="button" id="deleteBtn" class="w-full text-red-400 text-xs font-bold mt-4 hidden" onclick="window.deleteItem()">Delete Permanently</button>
+                    <div class="flex gap-2 pt-4">
+                        <button type="button" onclick="window.closeModal()" class="flex-1 py-3 text-gray-400 font-bold">Cancel</button>
+                        <button type="submit" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black">Save</button>
+                    </div>
+                    <button type="button" id="deleteBtn" class="w-full text-red-400 text-xs font-bold mt-4 hidden" onclick="window.deleteItem()">Delete This Entry</button>
                 </form>
             </div>
         </div>
     </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around p-3 z-50">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 z-50">
         <button onclick="window.showTab('dashboard')" id="nav-dash" class="flex flex-col items-center p-2 text-emerald-600">
-            <i class="fas fa-th-list text-xl"></i><span class="text-[9px] mt-1 font-black uppercase">Stock</span>
+            <i class="fas fa-list text-xl"></i><span class="text-[9px] mt-1 font-black uppercase">Stock</span>
         </button>
         <button onclick="window.showTab('grocery')" id="nav-groc" class="flex flex-col items-center p-2 text-gray-400">
             <i class="fas fa-shopping-basket text-xl"></i><span class="text-[9px] mt-1 font-black uppercase">Shopping</span>
