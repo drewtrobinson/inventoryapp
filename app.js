@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'https://YOUR_ID.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_YOUR_KEY';
+const SUPABASE_URL = 'https://vvzsrrcddwljhirbeilt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_8soLaZIbUDWBV3hQIFVGIA_ycLtozey';
 
 let pantryClient;
 let inventory = [];
