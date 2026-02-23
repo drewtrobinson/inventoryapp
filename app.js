@@ -3,6 +3,7 @@ const SUPABASE_KEY = 'sb_publishable_8soLaZIbUDWBV3hQIFVGIA_ycLtozey';
 
 let pantryClient;
 let inventory = [];
+const CATEGORIES = ["Pantry", "Fridge", "Freezer", "Deep Freezer", "Spices", "Ellowyn's", "Dairy", "General"];
 
 async function startApp() {
     try {
@@ -10,24 +11,21 @@ async function startApp() {
         const { data, error } = await pantryClient.from('inventory').select('*');
         if (error) throw error;
         inventory = data || [];
-        document.getElementById('syncStatus').innerText = "Live Household Sync 🟢";
+        document.getElementById('syncStatus').innerText = "Household Sync Active 🟢";
         window.renderUI();
 
-        // REAL-TIME LISTENER
         pantryClient.channel('pantry-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, payload => {
                 const updatedItem = payload.new;
-                const oldItemIndex = inventory.findIndex(i => i.id === updatedItem.id);
+                const oldItemIndex = inventory.findIndex(i => i.id === updatedItem?.id || i.id === payload.old?.id);
                 
-                // Update local list
                 if (payload.eventType === 'INSERT') inventory.push(updatedItem);
                 if (payload.eventType === 'UPDATE') inventory[oldItemIndex] = updatedItem;
                 if (payload.eventType === 'DELETE') inventory = inventory.filter(i => i.id !== payload.old.id);
 
                 window.renderUI();
 
-                // APPLY FLASH EFFECT to the changed item
-                if (updatedItem && updatedItem.id) {
+                if (payload.eventType === 'UPDATE' && updatedItem) {
                     const el = document.getElementById(`item-${updatedItem.id}`);
                     if (el) {
                         el.classList.add('sync-flash');
@@ -44,49 +42,84 @@ async function startApp() {
 window.renderUI = () => {
     const list = document.getElementById('inventoryList');
     const search = document.getElementById('searchInput').value.toLowerCase();
-    const cat = document.getElementById('categoryFilter').value;
-
-    let filtered = inventory.filter(i => 
-        i.name.toLowerCase().includes(search) && (cat === 'all' || i.category === cat)
-    );
-
-    document.getElementById('stat-total').innerText = inventory.length;
-    // Only count as "Low" if it's replenishable
+    
+    // Stats
     const lowItems = inventory.filter(i => i.replenishable && i.qty <= i.min);
+    document.getElementById('stat-total').innerText = inventory.length;
     document.getElementById('stat-low').innerText = lowItems.length;
+    document.getElementById('badge-count').innerText = lowItems.length;
+    document.getElementById('badge-count').classList.toggle('hidden', lowItems.length === 0);
 
-    list.innerHTML = filtered.map(item => `
-        <div id="item-${item.id}" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 ${item.qty <= item.min ? 'low-stock' : ''} flex items-center justify-between transition-all">
-            <div onclick="window.openModal('${item.id}')" class="flex-1">
-                <h4 class="font-black text-gray-800">${item.name}</h4>
-                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">${item.category}</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <button onclick="window.updateQty('${item.id}', -1)" class="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 font-black">-</button>
-                <span class="font-black w-6 text-center text-lg">${item.qty}</span>
-                <button onclick="window.updateQty('${item.id}', 1)" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 font-black">+</button>
-            </div>
-        </div>
-    `).join('');
+    // Grouping Logic
+    let dashboardHTML = '';
+    CATEGORIES.forEach(cat => {
+        const catItems = inventory.filter(i => i.category === cat && i.name.toLowerCase().includes(search));
+        if (catItems.length > 0) {
+            dashboardHTML += `
+                <div>
+                    <h3 class="bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest p-2 rounded-lg mb-2 category-header">${cat}</h3>
+                    <div class="space-y-2">
+                        ${catItems.map(item => `
+                            <div id="item-${item.id}" class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 ${item.qty <= item.min ? 'low-stock' : ''} flex items-center justify-between transition-all">
+                                <div onclick="window.openModal('${item.id}')" class="flex-1">
+                                    <h4 class="font-black text-gray-800 leading-tight">${item.name}</h4>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <button onclick="window.updateQty('${item.id}', -1)" class="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 font-black">-</button>
+                                    <span class="font-black w-6 text-center text-lg">${item.qty}</span>
+                                    <button onclick="window.updateQty('${item.id}', 1)" class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 font-black">+</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    });
+    list.innerHTML = dashboardHTML || '<p class="text-center text-gray-400 py-10">No items found.</p>';
 
-    document.getElementById('groceryList').innerHTML = lowItems.length ? lowItems.map(item => `
-        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl mb-2">
-            <div><p class="font-black">${item.name}</p><p class="text-[10px] text-gray-400 font-bold uppercase">${item.category}</p></div>
-            <i class="fas fa-cart-arrow-down text-emerald-300"></i>
+    // Shopping List with Checkboxes
+    const groceryList = document.getElementById('groceryList');
+    const shoppingItems = [...lowItems].sort((a, b) => a.checked - b.checked); // Checked items to bottom
+
+    groceryList.innerHTML = shoppingItems.length ? shoppingItems.map(item => `
+        <div class="flex items-center gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm ${item.checked ? 'item-checked' : ''}">
+            <input type="checkbox" ${item.checked ? 'checked' : ''} 
+                   onchange="window.toggleCheck('${item.id}', this.checked)" 
+                   class="w-6 h-6 rounded-lg accent-emerald-600">
+            <div class="flex-1">
+                <p class="font-black text-gray-800">${item.name}</p>
+                <p class="text-[9px] text-gray-400 font-bold uppercase tracking-tighter">${item.category} • Need: ${item.min}</p>
+            </div>
+            <button onclick="window.openModal('${item.id}')" class="text-gray-300 px-2"><i class="fas fa-edit"></i></button>
         </div>
-    `).join('') : '<p class="text-center text-gray-400 py-10">All stock is good! 🎉</p>';
+    `).join('') : '<p class="text-center text-gray-400 py-10 font-bold">Everything is in stock! 🎉</p>';
 };
 
-// ACTIONS
+window.toggleCheck = async (id, isChecked) => {
+    await pantryClient.from('inventory').update({ checked: isChecked }).eq('id', id);
+};
+
+window.resetList = async () => {
+    if(confirm('Uncheck all items on the shopping list?')) {
+        await pantryClient.from('inventory').update({ checked: false }).not('id', 'is', null);
+    }
+};
+
 window.updateQty = async (id, delta) => {
     const item = inventory.find(i => i.id === id);
-    await pantryClient.from('inventory').update({ qty: Math.max(0, item.qty + delta) }).eq('id', id);
+    const newQty = Math.max(0, item.qty + delta);
+    // Auto-uncheck when qty increases (means you restocked it)
+    const updateData = { qty: newQty };
+    if (newQty > item.min) updateData.checked = false;
+    
+    await pantryClient.from('inventory').update(updateData).eq('id', id);
 };
 
 window.openModal = (id = null) => {
     document.getElementById('itemForm').reset();
     document.getElementById('itemId').value = '';
-    document.getElementById('itemReplenish').checked = true; // Default
+    document.getElementById('itemReplenish').checked = true;
     document.getElementById('deleteBtn').classList.add('hidden');
     
     if (id) {
